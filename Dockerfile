@@ -7,16 +7,16 @@ RUN cargo build --release --locked
 
 
 # --- Final Stage ---
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 
 # Install runtime dependencies
 # - ca-certificates: For HTTPS
-# - libssl-dev: Common requirement for Rust TLS crates
+# - libssl3: Required for Rust TLS (newer version)
 # - git: *** Now required as we call the git executable ***
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
        ca-certificates \
-       libssl-dev \
+       libssl3 \
        git \
     && rm -rf /var/lib/apt/lists/*
 

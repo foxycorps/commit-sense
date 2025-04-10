@@ -12,6 +12,9 @@ inputs:
   openai-api-key:
     description: 'Required. Your OpenAI API Key for authenticating requests.'
     required: true
+  openai_api_key:
+    description: 'Alias for openai-api-key. Your OpenAI API Key for authenticating requests.'
+    required: false
   openai-api-url:
     description: 'Optional. The base URL for the OpenAI API. Defaults to the official endpoint.'
     required: false
@@ -28,6 +31,9 @@ inputs:
     description: 'Optional. Explicitly specify the project type (`rust` or `js`/`ts`). If omitted, attempts auto-detection based on `Cargo.toml` or `package.json`.'
     required: false
     # No default, allowing auto-detection by the tool
+  project_type:
+    description: 'Alias for project-type. Explicitly specify the project type (`rust` or `js`/`ts`).'
+    required: false
   base-ref:
     description: 'Optional. Explicit Git ref (tag, branch, commit hash) to use as the starting point for commit analysis. Overrides other discovery methods.'
     required: false
@@ -39,6 +45,10 @@ inputs:
     required: false
   write-changes:
     description: 'Optional. Set to `true` to make CommitSense modify the version file (`Cargo.toml`/`package.json`) and `CHANGELOG.md`. Defaults to `false` (dry-run mode).'
+    required: false
+    default: 'false'
+  write:
+    description: 'Alias for write-changes. Set to `true` to make CommitSense modify files.'
     required: false
     default: 'false'
 
@@ -59,7 +69,7 @@ runs:
   # Map inputs to environment variables that the CLI tool reads (API key/URL/Model)
   env:
     # Secrets should be passed via env vars for security
-    OPENAI_API_KEY: ${{ inputs.openai-api-key }}
+    OPENAI_API_KEY: ${{ inputs.openai-api-key || inputs.openai_api_key }}
     OPENAI_API_URL: ${{ inputs.openai-api-url }}
     OPENAI_MODEL: ${{ inputs.openai-model }}
     # Optional: Pass GITHUB_TOKEN if needed inside the tool later
@@ -73,6 +83,7 @@ runs:
     - ${{ inputs.project-path }} # Always pass path (defaults to '.')
     # Conditionally add --project-type only if the input is non-empty
     - ${{ inputs.project-type && format('--project-type {0}', inputs.project-type) || '' }}
+    - ${{ inputs.project_type && format('--project-type {0}', inputs.project_type) || '' }}
     # Conditionally add --base-ref only if the input is non-empty
     - ${{ inputs.base-ref && format('--base-ref {0}', inputs.base-ref) || '' }}
     # Conditionally add --tag-pattern only if the input is non-empty
@@ -81,6 +92,7 @@ runs:
     - ${{ inputs.tag-regex && format('--tag-regex {0}', inputs.tag-regex) || '' }}
     # Conditionally add the --write flag only if the input is exactly 'true'
     - ${{ inputs.write-changes == 'true' && '--write' || '' }}
+    - ${{ inputs.write == 'true' && '--write' || '' }}
 
 # Optional: Define branding for the action in the GitHub Marketplace
 branding:
