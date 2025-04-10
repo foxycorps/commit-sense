@@ -78,21 +78,44 @@ runs:
     # RUST_LOG: "info,commitsense=debug"
   # Pass other inputs as command-line arguments to the entrypoint (commitsense binary)
   # Use shell formatting `format(...)` to conditionally add arguments only if the input is provided.
+  # Use a shell script to properly handle arguments
+  entrypoint: 'sh'
   args:
-    - '--path'
-    - ${{ inputs.project-path }} # Always pass path (defaults to '.')
-    # Conditionally add --project-type only if the input is non-empty
-    - ${{ inputs.project-type && format('--project-type={0}', inputs.project-type) }}
-    - ${{ inputs.project_type && format('--project-type={0}', inputs.project_type) }}
-    # Conditionally add --base-ref only if the input is non-empty
-    - ${{ inputs.base-ref && format('--base-ref={0}', inputs.base-ref) }}
-    # Conditionally add --tag-pattern only if the input is non-empty
-    - ${{ inputs.tag-pattern && format('--tag-pattern={0}', inputs.tag-pattern) }}
-    # Conditionally add --tag-regex only if the input is non-empty
-    - ${{ inputs.tag-regex && format('--tag-regex={0}', inputs.tag-regex) }}
-    # Conditionally add the --write flag only if the input is exactly 'true'
-    - ${{ inputs.write-changes == 'true' && '--write' }}
-    - ${{ inputs.write == 'true' && '--write' }}
+    - '-c'
+    - |
+      set -e
+      ARGS="--path ${{ inputs.project-path }}"
+
+      # Add project-type if provided
+      if [ -n "${{ inputs.project-type }}" ]; then
+        ARGS="$ARGS --project-type=${{ inputs.project-type }}"
+      elif [ -n "${{ inputs.project_type }}" ]; then
+        ARGS="$ARGS --project-type=${{ inputs.project_type }}"
+      fi
+
+      # Add base-ref if provided
+      if [ -n "${{ inputs.base-ref }}" ]; then
+        ARGS="$ARGS --base-ref=${{ inputs.base-ref }}"
+      fi
+
+      # Add tag-pattern if provided
+      if [ -n "${{ inputs.tag-pattern }}" ]; then
+        ARGS="$ARGS --tag-pattern=${{ inputs.tag-pattern }}"
+      fi
+
+      # Add tag-regex if provided
+      if [ -n "${{ inputs.tag-regex }}" ]; then
+        ARGS="$ARGS --tag-regex=${{ inputs.tag-regex }}"
+      fi
+
+      # Add write flag if true
+      if [ "${{ inputs.write-changes }}" = "true" ] || [ "${{ inputs.write }}" = "true" ]; then
+        ARGS="$ARGS --write"
+      fi
+
+      # Run the command with the constructed arguments
+      echo "Running: commit-sense $ARGS"
+      commit-sense $ARGS
 
 # Optional: Define branding for the action in the GitHub Marketplace
 branding:

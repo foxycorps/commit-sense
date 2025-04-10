@@ -30,7 +30,14 @@ if [ -z "$OPENAI_API_KEY" ]; then\n\
   echo "Run with: docker run -e OPENAI_API_KEY=your_api_key -t commitsense"\n\
   exit 1\n\
 fi\n\
-exec commit-sense "$@"' > /usr/local/bin/docker-entrypoint.sh \
+# If first arg is -c, assume we are being run through GitHub Actions\n\
+if [ "$1" = "-c" ]; then\n\
+  # Pass all arguments to sh\n\
+  exec sh "$@"\n\
+else\n\
+  # Otherwise, run commit-sense directly\n\
+  exec commit-sense "$@"\n\
+fi' > /usr/local/bin/docker-entrypoint.sh \
     && chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Set the entrypoint to our wrapper script
