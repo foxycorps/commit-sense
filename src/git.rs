@@ -20,7 +20,7 @@ impl GitCommandExecutor for DefaultGitCommandExecutor {
     fn run_git_command(&self, path: &Path, args: &[String]) -> Result<String> {
         // Convert Vec<String> to Vec<&str> for Command
         let args_str: Vec<&str> = args.iter().map(AsRef::as_ref).collect();
-        
+
         trace!("Running git command: git {}", args_str.join(" "));
         let output = run_git_command_internal(path, &args_str)
             .map_err(|e| anyhow::anyhow!("{}", e))?;
@@ -39,57 +39,57 @@ impl GitInterface {
     pub fn new(executor: Box<dyn GitCommandExecutor>) -> Self {
         Self { executor }
     }
-    
+
     /// Create a new GitInterface with the default executor
     pub fn default() -> Self {
         Self {
             executor: Box::new(DefaultGitCommandExecutor)
         }
     }
-    
+
     /// Check if the specified path is a git repository
     pub fn is_git_repo(&self, path: &Path) -> bool {
         let git_dir = path.join(".git");
         git_dir.exists() && git_dir.is_dir()
     }
-    
+
     /// Get the latest commit OID
     pub fn get_latest_commit_oid(&self, path: &Path) -> Result<String> {
         let args = vec!["rev-parse".to_string(), "HEAD".to_string()];
         self.executor.run_git_command(path, &args)
     }
-    
+
     /// Get commits since a specific OID
     pub fn get_commits_since_oid(&self, path: &Path, base_oid: &str, format: &str) -> Result<Vec<String>> {
         let range = format!("{}..HEAD", base_oid);
         let format_arg = format!("--format={}", format);
         let args = vec![
-            "log".to_string(), 
-            range, 
-            format_arg, 
+            "log".to_string(),
+            range,
+            format_arg,
             "--reverse".to_string()
         ];
-        
+
         let output = self.executor.run_git_command(path, &args)?;
         Ok(output.lines().map(String::from).collect())
     }
-    
+
     /// Find the latest version tag
     pub fn find_latest_version_tag(&self, path: &Path, pattern: Option<&str>) -> Result<String> {
         let mut args = vec!["tag".to_string(), "--sort=-v:refname".to_string()];
-        
+
         if let Some(pattern) = pattern {
             args.push("--list".to_string());
             args.push(pattern.to_string());
         }
-        
+
         let output = self.executor.run_git_command(path, &args)?;
         let tags: Vec<&str> = output.lines().collect();
-        
+
         if tags.is_empty() {
             anyhow::bail!("No version tags found");
         }
-        
+
         Ok(tags[0].to_string())
     }
 }
@@ -167,8 +167,8 @@ fn get_commit_time(project_path: &Path, git_ref: &str) -> Result<i64, CommitSens
 
 /// Retrieves the commit OID (hash) for a given Git reference, ensuring it points to a commit.
 fn get_commit_oid(project_path: &Path, git_ref: &str) -> Result<String, CommitSenseError> {
-    // Use rev-parse to get the OID. Appending '^{commit}' resolves tags to the commit they point to.
-    let output = run_git_command_internal(project_path, &[&format!("{}@{{}}", git_ref)])?; // Use `@{}` to handle branches correctly, falls back for tags/hashes
+    // Use rev-parse to get the OID. Appending '@{}' resolves tags to the commit they point to.
+    let output = run_git_command_internal(project_path, &["rev-parse", &format!("{}@{{}}", git_ref)])?; // Use `@{}` to handle branches correctly, falls back for tags/hashes
     let oid = parse_output(output)?;
     if oid.is_empty() {
          return Err(CommitSenseError::GitCommand(format!(
