@@ -1,5 +1,5 @@
 # --- Builder Stage ---
-FROM rust:1.77 as builder
+FROM rust:1.86 as builder
 WORKDIR /usr/src/commitsense
 COPY ./Cargo.toml ./Cargo.toml
 COPY ./Cargo.lock ./Cargo.lock

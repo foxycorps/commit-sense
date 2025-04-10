@@ -1,7 +1,7 @@
 # Metadata for the GitHub Action
 name: 'CommitSense AI Versioner'
-description: 'Analyzes git commits using AI to suggest the next semantic version and generate a changelog based on changes since the last release point.'
-author: 'Your Name or Organization <contact@example.com>' # Replace with your details
+description: 'Uses AI to analyze commits, suggest semantic version bumps, and generate changelog entries automatically.'
+author: 'FoxyCorps <brayden@foxycorps.com>'
 
 # Define the inputs the action accepts
 inputs:

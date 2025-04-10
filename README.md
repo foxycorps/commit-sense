@@ -22,8 +22,8 @@ CommitSense is a command-line tool and GitHub Action designed to automate semant
 ## Installation (CLI - Requires Rust)
 
 1.  Ensure you have Rust installed: [https://www.rust-lang.org/tools/install](https://www.rust-lang.org/tools/install)
-2.  Clone the repository: `git clone https://github.com/your-username/commitsense.git` (Replace URL)
-3.  Navigate to the directory: `cd commitsense`
+2.  Clone the repository: `git clone https://github.com/foxycorps/commit-sense.git`
+3.  Navigate to the directory: `cd commit-sense`
 4.  Build the release binary: `cargo build --release`
 5.  The executable will be at `./target/release/commitsense`. You can copy this to a location in your PATH.
 
@@ -72,7 +72,7 @@ jobs:
           fetch-depth: 0
       
       - name: Run CommitSense
-        uses: your-username/commitsense@v1
+        uses: foxycorps/commit-sense@v1
         with:
           openai_api_key: ${{ secrets.OPENAI_API_KEY }}
           # Optional parameters:
@@ -106,8 +106,8 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/commitsense.git
-cd commitsense
+git clone https://github.com/foxycorps/commit-sense.git
+cd commit-sense
 
 # Install development dependencies
 cargo build
