@@ -41,7 +41,7 @@ We welcome feature suggestions! When creating a feature request:
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/commit-sense.git
+git clone https://github.com/foxycorps/commit-sense.git
 cd commit-sense
 
 # Build the project
