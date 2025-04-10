@@ -26,7 +26,7 @@ fn setup_mock_git_repo() -> Result<(TempDir, PathBuf)> {
         .status()?;
         
     Command::new("git")
-        .args(["config", "user.email", "test@example.com"])
+        .args(["config", "user.email", "test@foxycorps.com"])
         .current_dir(&path)
         .status()?;
     

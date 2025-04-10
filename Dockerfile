@@ -1,9 +1,7 @@
 # --- Builder Stage ---
-FROM rust:1.77 as builder
+FROM rust:1.86 as builder
 WORKDIR /usr/src/commitsense
-COPY ./Cargo.toml ./Cargo.toml
-COPY ./Cargo.lock ./Cargo.lock
-COPY ./src ./src
+COPY . .
 # Build release binary
 RUN cargo build --release --locked
 
@@ -23,7 +21,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the compiled binary
-COPY --from=builder /usr/src/commitsense/target/release/commitsense /usr/local/bin/commitsense
+COPY --from=builder /usr/src/commitsense/target/release/commit-sense /usr/local/bin/commitsense
 
 # Set the entrypoint
 ENTRYPOINT ["commitsense"]
