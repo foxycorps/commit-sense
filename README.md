@@ -70,13 +70,14 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      
+
       - name: Run CommitSense
-        uses: foxycorps/commit-sense@v1
+        uses: foxycorps/commit-sense@0.1.5
         with:
           openai_api_key: ${{ secrets.OPENAI_API_KEY }}
           # Optional parameters:
-          # project_path: ./packages/my-package  # For monorepos
+          # project-path: ./packages/my-package  # For monorepos
+          # project-type: rust  # Explicitly set project type
           # write: "true"  # Enable write mode
 ```
 

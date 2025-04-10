@@ -21,7 +21,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the compiled binary
-COPY --from=builder /usr/src/commitsense/target/release/commit-sense /usr/local/bin/commitsense
+COPY --from=builder /usr/src/commitsense/target/release/commit-sense /usr/local/bin/commit-sense
 
 # Set the entrypoint
-ENTRYPOINT ["commitsense"]
+ENTRYPOINT ["commit-sense"]

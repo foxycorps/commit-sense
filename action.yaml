@@ -82,17 +82,17 @@ runs:
     - '--path'
     - ${{ inputs.project-path }} # Always pass path (defaults to '.')
     # Conditionally add --project-type only if the input is non-empty
-    - ${{ inputs.project-type && format('--project-type {0}', inputs.project-type) || '' }}
-    - ${{ inputs.project_type && format('--project-type {0}', inputs.project_type) || '' }}
+    - ${{ inputs.project-type && format('--project-type={0}', inputs.project-type) }}
+    - ${{ inputs.project_type && format('--project-type={0}', inputs.project_type) }}
     # Conditionally add --base-ref only if the input is non-empty
-    - ${{ inputs.base-ref && format('--base-ref {0}', inputs.base-ref) || '' }}
+    - ${{ inputs.base-ref && format('--base-ref={0}', inputs.base-ref) }}
     # Conditionally add --tag-pattern only if the input is non-empty
-    - ${{ inputs.tag-pattern && format('--tag-pattern {0}', inputs.tag-pattern) || '' }}
+    - ${{ inputs.tag-pattern && format('--tag-pattern={0}', inputs.tag-pattern) }}
     # Conditionally add --tag-regex only if the input is non-empty
-    - ${{ inputs.tag-regex && format('--tag-regex {0}', inputs.tag-regex) || '' }}
+    - ${{ inputs.tag-regex && format('--tag-regex={0}', inputs.tag-regex) }}
     # Conditionally add the --write flag only if the input is exactly 'true'
-    - ${{ inputs.write-changes == 'true' && '--write' || '' }}
-    - ${{ inputs.write == 'true' && '--write' || '' }}
+    - ${{ inputs.write-changes == 'true' && '--write' }}
+    - ${{ inputs.write == 'true' && '--write' }}
 
 # Optional: Define branding for the action in the GitHub Marketplace
 branding:
