@@ -167,8 +167,8 @@ fn get_commit_time(project_path: &Path, git_ref: &str) -> Result<i64, CommitSens
 
 /// Retrieves the commit OID (hash) for a given Git reference, ensuring it points to a commit.
 fn get_commit_oid(project_path: &Path, git_ref: &str) -> Result<String, CommitSenseError> {
-    // Use rev-parse to get the OID. Appending '@{}' resolves tags to the commit they point to.
-    let output = run_git_command_internal(project_path, &["rev-parse", &format!("{}@{{}}", git_ref)])?; // Use `@{}` to handle branches correctly, falls back for tags/hashes
+    // Use rev-parse to get the OID
+    let output = run_git_command_internal(project_path, &["rev-parse", git_ref])?; // Simple rev-parse is more reliable
     let oid = parse_output(output)?;
     if oid.is_empty() {
          return Err(CommitSenseError::GitCommand(format!(
