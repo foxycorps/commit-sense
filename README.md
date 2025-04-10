@@ -18,6 +18,7 @@ CommitSense is a command-line tool and GitHub Action designed to automate semant
 * **Monorepo Friendly:** Use the `--path` argument to target specific packages within a monorepo.
 * **GitHub Action:** Easily integrates into your CI/CD pipeline.
 * **Dry Run Mode:** Runs read-only by default; use `--write` to modify files.
+* **Nightly Releases:** Generate nightly versions with date-based pre-release identifiers using `--nightly`.
 
 ## Installation (CLI - Requires Rust)
 
@@ -47,6 +48,9 @@ export OPENAI_API_KEY="sk-..."
 # Apply changes (update version file and CHANGELOG.md) in current dir
 ./target/release/commitsense --write
 
+# Generate a nightly release with date-based pre-release identifier
+./target/release/commitsense --nightly --write
+
 # Get help
 ./target/release/commitsense --help
 ```
@@ -72,13 +76,14 @@ jobs:
           fetch-depth: 0
 
       - name: Run CommitSense
-        uses: foxycorps/commit-sense@0.1.5
+        uses: foxycorps/commit-sense@0.1.7
         with:
           openai_api_key: ${{ secrets.OPENAI_API_KEY }}
           # Optional parameters:
           # project-path: ./packages/my-package  # For monorepos
           # project-type: rust  # Explicitly set project type
           # write: "true"  # Enable write mode
+          # nightly: "true"  # Generate nightly release
 ```
 
 ## Configuration Options
@@ -91,7 +96,43 @@ jobs:
 | `--tag-pattern` | Git tag glob pattern to find last release | |
 | `--tag-regex` | Git tag regex pattern to find last release | |
 | `--base-ref` | Git ref to compare against | |
-| `--openai-model` | OpenAI model to use | gpt-3.5-turbo |
+| `--openai-model` | OpenAI model to use | gpt-4o |
+| `--nightly` | Generate nightly release with date-based pre-release identifier | false |
+
+## Nightly Releases
+
+CommitSense supports generating nightly releases with date-based pre-release identifiers. This is useful for development builds or testing.
+
+### How it works
+
+1. When the `--nightly` flag is enabled, CommitSense adds a pre-release identifier to the version in the format `-nightly.YYYYMMDD`.
+2. For example, version `1.2.3` becomes `1.2.3-nightly.20250410` (where `20250410` is the current date).
+3. Nightly releases can be generated even if there are no changes that warrant a version bump.
+4. When using the GitHub Action, the nightly version is available as the `nightly_version` output.
+
+### CLI Example
+
+```bash
+# Generate a nightly release
+commit-sense --api-key YOUR_API_KEY --nightly --write
+```
+
+### GitHub Action Example
+
+```yaml
+- name: Run CommitSense with Nightly Release
+  id: commitsense
+  uses: foxycorps/commit-sense@0.1.7
+  with:
+    openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+    project-type: rust
+    write: "true"
+    nightly: "true"
+
+# Access the nightly version in subsequent steps
+- name: Use Nightly Version
+  run: echo "Nightly version is ${{ steps.commitsense.outputs.nightly_version }}"
+```
 
 ## Contributing
 

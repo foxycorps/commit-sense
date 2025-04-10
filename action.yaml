@@ -51,6 +51,10 @@ inputs:
     description: 'Alias for write-changes. Set to `true` to make CommitSense modify files.'
     required: false
     default: 'false'
+  nightly:
+    description: 'Generate a nightly release version with the current date. This will append a pre-release identifier like "-nightly.YYYYMMDD" to the version.'
+    required: false
+    default: 'false'
 
 # Define the outputs the action produces
 outputs:
@@ -58,6 +62,8 @@ outputs:
     description: 'The type of version bump suggested by the AI (`major`, `minor`, `patch`, or `none`).'
   next_version:
     description: 'The full semantic version string suggested by the AI for the next release.'
+  nightly_version:
+    description: 'The nightly version string with pre-release identifier (only set when `nightly: true`).'
   changelog:
     description: 'The generated changelog section in Markdown format, summarizing the changes for this version.'
 
@@ -109,6 +115,11 @@ runs:
       # Add write flag if true
       if [ "${{ inputs.write-changes }}" = "true" ] || [ "${{ inputs.write }}" = "true" ]; then
         ARGS="$ARGS --write"
+      fi
+
+      # Add nightly flag if true
+      if [ "${{ inputs.nightly }}" = "true" ]; then
+        ARGS="$ARGS --nightly"
       fi
 
       # Run the command with the constructed arguments

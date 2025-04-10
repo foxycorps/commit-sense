@@ -1,4 +1,5 @@
 use semver::Version;
+use chrono::Utc;
 
 /// Calculates the expected next version based on a strict interpretation of the bump type.
 ///
@@ -44,4 +45,29 @@ pub fn calculate_expected_version(current_version: &Version, bump_type: &str) ->
         }
     }
     expected_version
+}
+
+/// Creates a nightly version by adding a pre-release identifier with the current date.
+///
+/// # Arguments
+/// * `version` - The base semantic version to convert to a nightly version.
+///
+/// # Returns
+/// A new `semver::Version` with a pre-release identifier in the format "nightly.YYYYMMDD".
+pub fn create_nightly_version(version: &Version) -> Version {
+    let mut nightly_version = version.clone();
+
+    // Format the current date as YYYYMMDD
+    let today = Utc::now().format("%Y%m%d").to_string();
+
+    // Create the pre-release identifier (nightly.YYYYMMDD)
+    let pre_release = format!("nightly.{}", today);
+
+    // Parse the pre-release string into a semver::Prerelease
+    nightly_version.pre = pre_release.parse().unwrap_or_default();
+
+    // Clear build metadata
+    nightly_version.build = semver::BuildMetadata::EMPTY;
+
+    nightly_version
 }

@@ -63,6 +63,12 @@ pub struct Cli {
     /// If false (default), runs in dry-run mode, only printing suggestions.
     #[arg(long, default_value_t = false)]
     pub write: bool,
+
+    /// Generate a nightly release version with the current date.
+    /// This will append a pre-release identifier like '-nightly.YYYYMMDD' to the version.
+    /// Example: 1.2.3 becomes 1.2.3-nightly.20250410
+    #[arg(long, default_value_t = false)]
+    pub nightly: bool,
 }
 
 /// Enum representing the supported project types for version file handling.

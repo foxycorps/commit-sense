@@ -143,18 +143,33 @@ async fn run_commitsense(config: &Cli) -> Result<()> {
         ai_suggestion.bump_type, ai_suggestion.next_version
     );
 
+    // Apply nightly versioning if requested
+    let mut final_version = ai_suggestion.next_version.clone();
+    if config.nightly {
+        // Parse the version string
+        let parsed_version = semver::Version::parse(&ai_suggestion.next_version)
+            .context("Failed to parse AI suggested version for nightly conversion")?;
+
+        // Create a nightly version
+        let nightly_version = version::create_nightly_version(&parsed_version);
+        final_version = nightly_version.to_string();
+
+        info!("Applied nightly versioning: {} -> {}", ai_suggestion.next_version, final_version);
+    }
+
     // 6. Format the Changelog Section
-    // This section remains unchanged.
     let changelog_section = changelog::format_changelog_section(
-        &ai_suggestion.next_version, // Use the validated version from AI
+        &final_version, // Use the final version (may be nightly)
         &ai_suggestion.changelog_markdown,
     );
 
     // 7. Output Results to Console
-    // This section remains unchanged.
     println!("\n--- CommitSense Analysis ---");
     println!("Suggested Bump Type: {}", ai_suggestion.bump_type);
     println!("Suggested Next Version: {}", ai_suggestion.next_version);
+    if config.nightly {
+        println!("Nightly Version: {}", final_version);
+    }
     println!("\nGenerated Changelog Section:");
     println!("----------------------------");
     println!("{}", changelog_section);
@@ -170,6 +185,11 @@ async fn run_commitsense(config: &Cli) -> Result<()> {
             writeln!(file, "bump_type={}", ai_suggestion.bump_type).ok();
             writeln!(file, "next_version={}", ai_suggestion.next_version).ok();
 
+            // Add nightly version output if nightly flag is set
+            if config.nightly {
+                writeln!(file, "nightly_version={}", final_version).ok();
+            }
+
             // For multiline values, we need to use a special delimiter syntax
             let delimiter = format!("EOF_{}", std::process::id());
             writeln!(file, "changelog<<{}", delimiter).ok();
@@ -180,24 +200,27 @@ async fn run_commitsense(config: &Cli) -> Result<()> {
         // Fallback for local runs or older GitHub Actions
         println!("bump_type: {}", ai_suggestion.bump_type);
         println!("next_version: {}", ai_suggestion.next_version);
+        if config.nightly {
+            println!("nightly_version: {}", final_version);
+        }
         println!("\nChangelog:\n{}", changelog_section);
     }
 
     // 9. Write Changes to Files (if --write flag is enabled)
     // This section remains unchanged.
     if config.write {
-        // Only proceed with writing if a version bump actually occurred.
-        if ai_suggestion.bump_type != "none" {
-            info!("--write flag detected and bump type is not 'none'. Applying changes...");
+        // Only proceed with writing if a version bump actually occurred or nightly is enabled.
+        if ai_suggestion.bump_type != "none" || config.nightly {
+            info!("--write flag detected and bump type is not 'none' or nightly is enabled. Applying changes...");
 
             // Update the version in Cargo.toml or package.json
             project
-                .set_version(&ai_suggestion.next_version)
+                .set_version(&final_version) // Use the final version (may be nightly)
                 .context("Failed to update project version file")?;
             info!(
                 "Successfully updated version in {} to {}",
                 project.version_file_path().display(),
-                ai_suggestion.next_version
+                final_version
             );
 
             // Prepend the generated section to CHANGELOG.md
@@ -207,10 +230,10 @@ async fn run_commitsense(config: &Cli) -> Result<()> {
 
             println!(
                 "\nChanges applied: Project version updated to {} and CHANGELOG.md updated.",
-                ai_suggestion.next_version
+                final_version
             );
         } else {
-            info!("--write flag detected, but bump type is 'none'. No file changes needed.");
+            info!("--write flag detected, but bump type is 'none' and nightly is not enabled. No file changes needed.");
             println!("\n(No file changes applied as suggested bump type was 'none')");
         }
     } else {
