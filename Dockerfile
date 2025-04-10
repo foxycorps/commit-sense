@@ -23,12 +23,17 @@ RUN apt-get update \
 # Copy the compiled binary
 COPY --from=builder /usr/src/commitsense/target/release/commit-sense /usr/local/bin/commit-sense
 
-# Create a wrapper script to check for API key
+# Create a wrapper script to check for API key and configure Git
 RUN echo '#!/bin/bash\n\
 if [ -z "$OPENAI_API_KEY" ]; then\n\
   echo "Error: OPENAI_API_KEY environment variable is required"\n\
   echo "Run with: docker run -e OPENAI_API_KEY=your_api_key -t commitsense"\n\
   exit 1\n\
+fi\n\
+# Configure Git to trust the GitHub workspace directory\n\
+if [ -d "/github/workspace" ]; then\n\
+  git config --global --add safe.directory /github/workspace\n\
+  echo "Configured Git to trust /github/workspace"\n\
 fi\n\
 # If first arg is -c, assume we are being run through GitHub Actions\n\
 if [ "$1" = "-c" ]; then\n\

@@ -78,8 +78,6 @@ runs:
     # RUST_LOG: "info,commitsense=debug"
   # Pass other inputs as command-line arguments to the entrypoint (commitsense binary)
   # Use shell formatting `format(...)` to conditionally add arguments only if the input is provided.
-  # Use a shell script to properly handle arguments
-  entrypoint: 'sh'
   args:
     - '-c'
     - |
