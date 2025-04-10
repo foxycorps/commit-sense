@@ -1,0 +1,33 @@
+[package]
+name = "commit-sense"
+version = "0.1.0"
+edition = "2021"
+description = "A tool to analyze git commits and suggest semantic version bumps and changelog entries"
+authors = ["Brayden <brayden@example.com>"]
+license = "MIT"
+repository = "https://github.com/brayden/commit-sense"
+readme = "README.md"
+keywords = ["git", "semver", "changelog", "versioning", "ai"]
+categories = ["command-line-utilities", "development-tools"]
+
+[dependencies]
+# --- Core Crates ---
+clap = { version = "4.5.35", features = ["derive", "env"] }
+anyhow = "1.0.97"
+thiserror = "2.0.12"
+log = "0.4.27"
+env_logger = "0.11.8"
+chrono = { version = "0.4.40", features = ["serde"] }
+
+# --- Functionality Specific Crates ---
+reqwest = { version = "0.12.15", features = ["json", "blocking"] }
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.140"
+semver = "1.0.26"
+toml = "0.8.20"
+regex = "1.11.1"
+glob = "0.3.2"
+
+[dev-dependencies]
+mockito = "1.7.0"
+tempfile = "3.19.1"

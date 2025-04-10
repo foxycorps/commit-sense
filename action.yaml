@@ -1,0 +1,88 @@
+# Metadata for the GitHub Action
+name: 'CommitSense AI Versioner'
+description: 'Analyzes git commits using AI to suggest the next semantic version and generate a changelog based on changes since the last release point.'
+author: 'Your Name or Organization <contact@example.com>' # Replace with your details
+
+# Define the inputs the action accepts
+inputs:
+  github-token:
+    description: 'GitHub Token (GITHUB_TOKEN). Optional, primarily useful if future versions need to interact more with GitHub API (e.g., creating tags/releases).'
+    required: false
+    default: ${{ github.token }}
+  openai-api-key:
+    description: 'Required. Your OpenAI API Key for authenticating requests.'
+    required: true
+  openai-api-url:
+    description: 'Optional. The base URL for the OpenAI API. Defaults to the official endpoint.'
+    required: false
+    default: 'https://api.openai.com/v1'
+  openai-model:
+    description: 'Optional. The specific OpenAI model ID to use (e.g., gpt-4o, gpt-4-turbo).'
+    required: false
+    default: 'gpt-4o'
+  project-path:
+    description: 'Optional. Path to the project root or specific sub-package within a monorepo relative to the repository root. Defaults to the repository root (`.`).'
+    required: false
+    default: '.'
+  project-type:
+    description: 'Optional. Explicitly specify the project type (`rust` or `js`/`ts`). If omitted, attempts auto-detection based on `Cargo.toml` or `package.json`.'
+    required: false
+    # No default, allowing auto-detection by the tool
+  base-ref:
+    description: 'Optional. Explicit Git ref (tag, branch, commit hash) to use as the starting point for commit analysis. Overrides other discovery methods.'
+    required: false
+  tag-pattern:
+    description: 'Optional. Glob pattern to find the latest tag representing the last release (e.g., `v*.*.*`). Used if `base-ref` is not set. Conflicts with `tag-regex`.'
+    required: false
+  tag-regex:
+    description: 'Optional. Regex pattern to find the latest tag representing the last release (e.g., `^v\\d+\\.\\d+\\.\\d+$`). Used if `base-ref` and `tag-pattern` are not set. Conflicts with `tag-pattern`.'
+    required: false
+  write-changes:
+    description: 'Optional. Set to `true` to make CommitSense modify the version file (`Cargo.toml`/`package.json`) and `CHANGELOG.md`. Defaults to `false` (dry-run mode).'
+    required: false
+    default: 'false'
+
+# Define the outputs the action produces
+outputs:
+  bump_type:
+    description: 'The type of version bump suggested by the AI (`major`, `minor`, `patch`, or `none`).'
+  next_version:
+    description: 'The full semantic version string suggested by the AI for the next release.'
+  changelog:
+    description: 'The generated changelog section in Markdown format, summarizing the changes for this version.'
+
+# Define how the action runs
+runs:
+  using: 'docker'
+  # Specifies the Dockerfile in the same directory as this action.yml
+  image: 'Dockerfile'
+  # Map inputs to environment variables that the CLI tool reads (API key/URL/Model)
+  env:
+    # Secrets should be passed via env vars for security
+    OPENAI_API_KEY: ${{ inputs.openai-api-key }}
+    OPENAI_API_URL: ${{ inputs.openai-api-url }}
+    OPENAI_MODEL: ${{ inputs.openai-model }}
+    # Optional: Pass GITHUB_TOKEN if needed inside the tool later
+    # GITHUB_TOKEN: ${{ inputs.github-token }}
+    # Set RUST_LOG for container logging level (optional, defaults set in main.rs)
+    # RUST_LOG: "info,commitsense=debug"
+  # Pass other inputs as command-line arguments to the entrypoint (commitsense binary)
+  # Use shell formatting `format(...)` to conditionally add arguments only if the input is provided.
+  args:
+    - '--path'
+    - ${{ inputs.project-path }} # Always pass path (defaults to '.')
+    # Conditionally add --project-type only if the input is non-empty
+    - ${{ inputs.project-type && format('--project-type {0}', inputs.project-type) || '' }}
+    # Conditionally add --base-ref only if the input is non-empty
+    - ${{ inputs.base-ref && format('--base-ref {0}', inputs.base-ref) || '' }}
+    # Conditionally add --tag-pattern only if the input is non-empty
+    - ${{ inputs.tag-pattern && format('--tag-pattern {0}', inputs.tag-pattern) || '' }}
+    # Conditionally add --tag-regex only if the input is non-empty
+    - ${{ inputs.tag-regex && format('--tag-regex {0}', inputs.tag-regex) || '' }}
+    # Conditionally add the --write flag only if the input is exactly 'true'
+    - ${{ inputs.write-changes == 'true' && '--write' || '' }}
+
+# Optional: Define branding for the action in the GitHub Marketplace
+branding:
+  icon: 'git-commit' # Choose an icon from Feather icons (https://feathericons.com/)
+  color: 'blue' # Choose a color theme (e.g., white, yellow, blue, green, orange, red, purple, gray-dark)
