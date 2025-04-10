@@ -17,7 +17,8 @@ use log::{error, info, warn}; // For logging different levels of information
 
 /// Entry point of the CommitSense application.
 /// Parses arguments, sets up logging, and orchestrates the main logic.
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     // Initialize the logger based on the RUST_LOG environment variable
     // (e.g., RUST_LOG=info, RUST_LOG=commitsense=debug)
     // Defaults to a reasonable level if RUST_LOG is not set.
@@ -31,7 +32,7 @@ fn main() -> Result<()> {
     info!("Starting CommitSense v{}...", env!("CARGO_PKG_VERSION"));
 
     // Execute the core logic, handling potential errors
-    if let Err(e) = run_commitsense(&cli_args) {
+    if let Err(e) = run_commitsense(&cli_args).await {
         // Log the error details for debugging
         // Use {:?} for detailed error information, including context chain from anyhow
         error!("CommitSense execution failed: {:?}", e);
@@ -46,7 +47,7 @@ fn main() -> Result<()> {
 // --- Core Logic Function ---
 
 /// Orchestrates the main workflow of CommitSense using `std::process::Command` for Git.
-fn run_commitsense(config: &Cli) -> Result<()> {
+async fn run_commitsense(config: &Cli) -> Result<()> {
     // 1. Resolve Project Path
     // Ensure the specified path exists and is accessible.
     let project_path = config.path.canonicalize().with_context(|| {
@@ -122,6 +123,7 @@ fn run_commitsense(config: &Cli) -> Result<()> {
             &commits,
             project.project_type(),
         )
+        .await
         .context("Failed to get and validate suggestion from OpenAI API")?;
 
     info!(

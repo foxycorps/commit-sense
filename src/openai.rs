@@ -3,10 +3,9 @@ use crate::error::CommitSenseError;
 use crate::version;
 use anyhow::{Context, Result};
 use log::{debug, info, warn};
-use reqwest::blocking::Client;
 use semver::Version;
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
+use openai_api_rs::v1::{api::OpenAIClient as OpenAIApiClient, chat_completion};
 
 // --- Structures for OpenAI API Interaction ---
 
@@ -57,21 +56,15 @@ pub struct OpenAIClient {
     api_key: String,
     api_url: String,
     model: String,
-    http_client: Client,
 }
 
 impl OpenAIClient {
     /// Creates a new OpenAIClient instance.
     pub fn new(api_key: String, api_url: String, model: String) -> Self {
-        let http_client = Client::builder()
-            .timeout(Duration::from_secs(90))
-            .build()
-            .expect("Failed to build reqwest HTTP client");
         OpenAIClient {
             api_key,
             api_url,
             model,
-            http_client,
         }
     }
 
@@ -90,9 +83,9 @@ impl OpenAIClient {
             .join("\n\n");
 
         // Build parts of the system prompt separately to avoid format string issues
-        let intro = format!("You are an AI assistant specializing in software versioning and release notes. Your task is to analyze the following git commit messages since the last release (currently version {}) for a {} project.", 
+        let intro = format!("You are an AI assistant specializing in software versioning and release notes. Your task is to analyze the following git commit messages since the last release (currently version {}) for a {} project.",
             current_version, project_type);
-            
+
         // Enhanced system prompt with more detailed guidelines and examples
         let system_prompt = format!("{}\n\nBased on the commit messages, determine:\n1. The appropriate semantic version bump type (major, minor, patch, or none)\n2. The exact next version number\n3. A well-formatted changelog in Markdown format\n\nFollow these semantic versioning rules carefully:\n- MAJOR version bump (x.0.0): Reserved for backwards-incompatible API changes, breaking changes, or significant rewrites\n  Example commits: \"BREAKING CHANGE: Remove deprecated API\", \"Complete rewrite of core functionality\"\n- MINOR version bump (0.x.0): For backwards-compatible new features or significant improvements\n  Example commits: \"Add new search functionality\", \"Implement caching system\", \"New CLI option for verbose output\"\n- PATCH version bump (0.0.x): For backwards-compatible bug fixes, performance improvements, or minor changes\n  Example commits: \"Fix null pointer exception\", \"Correct typo in error message\", \"Optimize database query\"\n- NO bump (none): For changes that don't affect the code functionality (docs, tests, CI/CD, refactoring)\n  Example commits: \"Update README\", \"Add unit tests\", \"Configure GitHub Actions\", \"Refactor variable names\"\n\nFor the changelog:\n- Group related changes together (e.g., group all bug fixes)\n- Use clear, concise language focusing on the impact of the change\n- Start each entry with a present-tense verb (Add, Fix, Update, etc.)\n\nReturn your analysis as a JSON object with this exact structure:\n```json\n{{\n  \"bump\": \"major|minor|patch|none\",\n  \"next_version\": \"x.y.z\",\n  \"changelog\": \"- Change 1\\n- Change 2\\n...\"\n}}\n```\n\nYour response should be strictly in this JSON format without any additional text.", intro);
 
@@ -115,7 +108,7 @@ impl OpenAIClient {
     }
 
     /// Calls the OpenAI API, parses the response, validates it, and returns the suggestion.
-    pub fn get_version_and_changelog(
+    pub async fn get_version_and_changelog(
         &self,
         current_version_str: &str,
         commits: &[String],
@@ -139,56 +132,62 @@ impl OpenAIClient {
             )
         })?;
 
-        // Build the request to the OpenAI API
+        // Build the messages for the OpenAI API
         let messages = self.build_prompt(current_version_str, commits, project_type);
-        let request = ChatCompletionRequest {
-            model: self.model.clone(),
-            messages,
-            temperature: Some(0.2), // Low temperature for more deterministic output
-        };
+
+        // Convert our messages to the format expected by openai_api_rs
+        let api_messages = messages.iter().map(|msg| {
+            chat_completion::ChatCompletionMessage {
+                role: match msg.role.as_str() {
+                    "system" => chat_completion::MessageRole::system,
+                    "user" => chat_completion::MessageRole::user,
+                    "assistant" => chat_completion::MessageRole::assistant,
+                    _ => chat_completion::MessageRole::user, // Default to user for unknown roles
+                },
+                content: chat_completion::Content::Text(msg.content.clone()),
+                name: None,
+                tool_calls: None,
+                tool_call_id: None,
+            }
+        }).collect::<Vec<_>>();
 
         // Log the API request (but not the full prompt which could be large)
         debug!(
-            "Sending request to OpenAI API at {} with model {}",
-            self.api_url, self.model
+            "Sending request to OpenAI API with model {}",
+            self.model
+        );
+
+        // Build the OpenAI client
+        let mut client = OpenAIApiClient::builder()
+            .with_api_key(&self.api_key)
+            .build()
+            .map_err(|e| anyhow::anyhow!("Failed to build OpenAI client: {}", e))?;
+
+        // Create the request
+        let req = chat_completion::ChatCompletionRequest::new(
+            self.model.clone(),
+            api_messages,
         );
 
         // Make the API request
-        let response = self
-            .http_client
-            .post(&self.api_url)
-            .header("Authorization", format!("Bearer {}", self.api_key))
-            .header("Content-Type", "application/json")
-            .json(&request)
-            .send()
-            .context("Failed to send request to OpenAI API")?;
-
-        // Check for HTTP errors
-        if !response.status().is_success() {
-            let status = response.status();
-            let error_text = response
-                .text()
-                .unwrap_or_else(|_| "Could not read error response".to_string());
-            return Err(CommitSenseError::Api(format!(
-                "OpenAI API returned error status {}: {}",
-                status, error_text
-            ))
-            .into());
-        }
-
-        // Parse the response
-        let response_data: ChatCompletionResponse = response
-            .json()
-            .context("Failed to parse JSON response from OpenAI API")?;
+        let response = client.chat_completion(req).await
+            .context("Failed to get chat completion from OpenAI API")?;
 
         // Extract the assistant's message
-        if response_data.choices.is_empty() {
+        if response.choices.is_empty() {
             return Err(CommitSenseError::Api(
                 "OpenAI API returned empty choices array".to_string(),
             )
             .into());
         }
-        let assistant_message = &response_data.choices[0].message.content;
+
+        // Get the content from the first choice
+        let assistant_message = match &response.choices[0].message.content {
+            Some(content) => content,
+            None => return Err(CommitSenseError::Api(
+                "OpenAI API returned a message with no content".to_string(),
+            ).into()),
+        };
 
         // Extract the JSON block from the message
         let json_block = extract_json_block(assistant_message).ok_or_else(|| {
