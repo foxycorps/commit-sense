@@ -96,9 +96,21 @@ async fn run_commitsense(config: &Cli) -> Result<()> {
         );
         println!("No new commits detected since the last identified release point.");
         // Output for GitHub Actions to indicate no change
-        println!("::set-output name=bump_type::none");
-        println!("::set-output name=next_version::{}", current_version_str);
-        println!("::set-output name=changelog::No changes detected since last release.");
+        if let Ok(github_output) = std::env::var("GITHUB_OUTPUT") {
+            // Using the new environment file approach
+            use std::fs::OpenOptions;
+            use std::io::Write;
+            if let Ok(mut file) = OpenOptions::new().append(true).open(github_output) {
+                writeln!(file, "bump_type=none").ok();
+                writeln!(file, "next_version={}", current_version_str).ok();
+                writeln!(file, "changelog=No changes detected since last release.").ok();
+            }
+        } else {
+            // Fallback for local runs or older GitHub Actions
+            println!("bump_type: none");
+            println!("next_version: {}", current_version_str);
+            println!("changelog: No changes detected since last release.");
+        }
         return Ok(()); // Exit successfully, nothing more to do.
     }
     info!(
@@ -149,16 +161,27 @@ async fn run_commitsense(config: &Cli) -> Result<()> {
     println!("----------------------------");
 
     // 8. Set Outputs for GitHub Actions
-    // This section remains unchanged.
     info!("Setting GitHub Actions outputs...");
-    println!("::set-output name=bump_type::{}", ai_suggestion.bump_type);
-    println!("::set-output name=next_version::{}", ai_suggestion.next_version);
-    // Properly escape the changelog content for multiline output variable
-    let escaped_changelog = changelog_section
-        .replace('%', "%25") // Escape percent signs
-        .replace('\n', "%0A") // Escape newlines
-        .replace('\r', "%0D"); // Escape carriage returns
-    println!("::set-output name=changelog::{}", escaped_changelog);
+    if let Ok(github_output) = std::env::var("GITHUB_OUTPUT") {
+        // Using the new environment file approach
+        use std::fs::OpenOptions;
+        use std::io::Write;
+        if let Ok(mut file) = OpenOptions::new().append(true).open(github_output) {
+            writeln!(file, "bump_type={}", ai_suggestion.bump_type).ok();
+            writeln!(file, "next_version={}", ai_suggestion.next_version).ok();
+
+            // For multiline values, we need to use a special delimiter syntax
+            let delimiter = format!("EOF_{}", std::process::id());
+            writeln!(file, "changelog<<{}", delimiter).ok();
+            writeln!(file, "{}", changelog_section).ok();
+            writeln!(file, "{}", delimiter).ok();
+        }
+    } else {
+        // Fallback for local runs or older GitHub Actions
+        println!("bump_type: {}", ai_suggestion.bump_type);
+        println!("next_version: {}", ai_suggestion.next_version);
+        println!("\nChangelog:\n{}", changelog_section);
+    }
 
     // 9. Write Changes to Files (if --write flag is enabled)
     // This section remains unchanged.
